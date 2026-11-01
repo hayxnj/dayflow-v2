@@ -51,7 +51,7 @@
 <!-- 캘린더 날짜 상세 -->
 <div id="dayModal" class="modal-backdrop"><div class="modal"><h2 id="dayModalTitle"></h2><div id="dayModalContent"></div><div class="modal-actions"><button class="secondary" onclick="closeModal('dayModal')">닫기</button></div></div></div>
 <div id="recoveryModal" class="modal-backdrop"><div class="modal"><h2>새 비밀번호 설정</h2><p class="subtitle">이메일의 재설정 링크로 접속했어요. 새 비밀번호를 설정해 주세요.</p><label>새 비밀번호 (8자 이상)</label><input id="recoveryPassword" class="field" type="password" autocomplete="new-password"><label>새 비밀번호 확인</label><input id="recoveryPassword2" class="field" type="password" autocomplete="new-password"><div class="modal-actions"><button class="primary" onclick="saveRecoveredPassword()">비밀번호 저장</button></div></div></div>
-<script src="https://cdn.jsdelivr.net/npm/@dfClient/dfClient-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const TODAY=()=>dateString(new Date());const DAYS=['일','월','화','수','목','금','토'];
