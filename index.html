@@ -616,17 +616,70 @@ function renderSubjects(){
 function renderCalendar(){
   const y=monthCursor.getFullYear(),m=monthCursor.getMonth();
   $('monthLabel').textContent=`${y}년 ${m+1}월`;
-  const first=new Date(y,m,1).getDay(),last=new Date(y,m+1,0).getDate();
+
+  const first=new Date(y,m,1).getDay();
+  const last=new Date(y,m+1,0).getDate();
   const days=['일','월','화','수','목','금','토'];
+
   let html=days.map(d=>`<div class="weekday">${d}</div>`).join('');
-  for(let i=0;i<first;i++)html+='<div></div>';
+
+  for(let i=0;i<first;i++){
+    html+='<div></div>';
+  }
+
   for(let d=1;d<=last;d++){
     const date=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const count=tasks.filter(t=>t.date===date).length;
-    html+=`<div class="day-cell ${date===today()?'today':''}"><strong>${d}</strong>${count?`<small>${count}개 일정</small>`:''}</div>`;
+
+    const dayTasks=tasks.filter(t=>t.date===date);
+    const dayRoutines=routines.filter(r=>isRoutineScheduledOnDate(r,date));
+
+    const entries=[
+      ...dayTasks.map(t=>({
+        name:t.name,
+        type:'할 일',
+        done:t.done
+      })),
+      ...dayRoutines.map(r=>({
+        name:r.name,
+        type:'루틴',
+        done:(r.checks||{})[date]
+      }))
+    ];
+
+    const visibleEntries=entries.slice(0,3);
+
+    const entryHTML=visibleEntries.map(item=>`
+      <div style="
+        font-size:11px;
+        line-height:1.4;
+        margin-top:4px;
+        padding:3px 4px;
+        border-radius:4px;
+        background:${item.type==='할 일'?'#e8f0ff':'#e7f5eb'};
+        color:${item.done?'#888':item.type==='할 일'?'#315b9a':'#287344'};
+        ${item.done?'text-decoration:line-through;':''}
+        overflow-wrap:anywhere;
+      ">
+        ${item.done?'✓ ':''}${item.type==='할 일'?'할 일':'루틴'} · ${escapeHTML(item.name)}
+      </div>
+    `).join('');
+
+    const moreHTML=entries.length>3
+      ? `<small style="display:block;margin-top:4px;color:#888;">+${entries.length-3}개 더</small>`
+      : '';
+
+    html+=`
+      <div class="day-cell ${date===today()?'today':''}">
+        <strong>${d}</strong>
+        ${entryHTML}
+        ${moreHTML}
+      </div>
+    `;
   }
+
   $('calendar').innerHTML=html;
 }
+  
 function changeMonth(n){monthCursor.setMonth(monthCursor.getMonth()+n);renderCalendar();}
 
 function renderHome(){
