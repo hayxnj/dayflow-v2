@@ -324,7 +324,13 @@ function renderTasks(){
   $('allTasks').innerHTML=list.length?list.sort((a,b)=>a.date.localeCompare(b.date)).map(taskHTML).join(''):'<div class="empty">표시할 할 일이 없어요.</div>';
 }
 function toggleTask(id){const t=tasks.find(x=>x.id===id);if(t)t.done=!t.done;save();}
-function deleteTask(id){if(confirm('이 할 일을 삭제할까요?')){tasks=tasks.filter(t=>t.id!==id);save();}}
+function deleteTask(id){
+  if(confirm('이 할 일을 삭제할까요?')){
+    tasks=tasks.filter(t=>t.id!==id);
+    save();
+    renderCalendar();
+  }
+}
 function openTaskModal(date=today()){
   $('taskDate').value=date;
   $('taskSubject').innerHTML=subjects.map(s=>`<option>${escapeHTML(s)}</option>`).join('');
@@ -508,7 +514,11 @@ function toggleRoutine(id,date=today()){
 }
 
 function deleteRoutine(id){
-  if(confirm('이 루틴을 삭제할까요?')){routines=routines.filter(r=>r.id!==id);save();}
+  if(confirm('이 루틴을 삭제할까요?')){
+    routines=routines.filter(r=>r.id!==id);
+    save();
+    renderCalendar();
+  }
 }
 
 function isRoutineScheduledOnDate(r,dateText){
@@ -701,26 +711,38 @@ function openCalendarDay(date){
   const dayRoutines=routines.filter(r=>isRoutineScheduledOnDate(r,date));
 
   const taskHTMLList=dayTasks.map(t=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee;">
+  <div style="padding:10px 0;border-bottom:1px solid #eee;">
+    <div style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox" ${t.done?'checked':''}
         onchange="toggleTask('${t.id}');openCalendarDay('${date}')">
-      <span style="${t.done?'text-decoration:line-through;color:#999;':''}">
+      <span style="flex:1;${t.done?'text-decoration:line-through;color:#999;':''}">
         ${escapeHTML(t.name)}
       </span>
-      <small style="margin-left:auto;color:#888;">할 일</small>
+      <small style="color:#888;">할 일</small>
     </div>
-  `).join('');
+    <div style="display:flex;gap:8px;margin:8px 0 0 28px;">
+      <button onclick="editCalendarTask('${t.id}','${date}')">수정</button>
+      <button onclick="deleteCalendarTask('${t.id}','${date}')">삭제</button>
+    </div>
+  </div>
+`).join('');
 
   const routineHTMLList=dayRoutines.map(r=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee;">
+  <div style="padding:10px 0;border-bottom:1px solid #eee;">
+    <div style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox" ${(r.checks||{})[date]?'checked':''}
         onchange="toggleRoutine('${r.id}','${date}');openCalendarDay('${date}')">
-      <span style="${(r.checks||{})[date]?'text-decoration:line-through;color:#999;':''}">
+      <span style="flex:1;${(r.checks||{})[date]?'text-decoration:line-through;color:#999;':''}">
         ${escapeHTML(r.name)}
       </span>
-      <small style="margin-left:auto;color:#888;">루틴</small>
+      <small style="color:#888;">루틴</small>
     </div>
-  `).join('');
+    <div style="display:flex;gap:8px;margin:8px 0 0 28px;">
+      <button onclick="editCalendarRoutine('${r.id}','${date}')">수정</button>
+      <button onclick="deleteCalendarRoutine('${r.id}','${date}')">삭제</button>
+    </div>
+  </div>
+`).join('');
 
   modal.innerHTML=`
     <div style="
@@ -773,6 +795,46 @@ function openCalendarDay(date){
 function closeCalendarDay(){
   const modal=document.getElementById('calendarDayModal');
   if(modal) modal.style.display='none';
+}
+
+function editCalendarTask(id,date){
+  const t=tasks.find(x=>x.id===id);
+  if(!t)return;
+
+  const name=prompt('할 일 이름을 수정해 주세요.',t.name);
+  if(name===null || !name.trim())return;
+
+  t.name=name.trim();
+  save();
+  renderCalendar();
+  openCalendarDay(date);
+}
+
+function deleteCalendarTask(id,date){
+  if(!confirm('이 할 일을 삭제할까요?'))return;
+
+  tasks=tasks.filter(t=>t.id!==id);
+  save();
+  renderCalendar();
+  openCalendarDay(date);
+}
+
+function editCalendarRoutine(id,date){
+  const r=routines.find(x=>x.id===id);
+  if(!r)return;
+
+  editRoutine(id);
+  renderCalendar();
+  openCalendarDay(date);
+}
+
+function deleteCalendarRoutine(id,date){
+  if(!confirm('이 루틴을 삭제할까요?'))return;
+
+  routines=routines.filter(r=>r.id!==id);
+  save();
+  renderCalendar();
+  openCalendarDay(date);
 }
   
 function changeMonth(n){monthCursor.setMonth(monthCursor.getMonth()+n);renderCalendar();}
