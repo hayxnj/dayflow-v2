@@ -325,8 +325,8 @@ function renderTasks(){
 }
 function toggleTask(id){const t=tasks.find(x=>x.id===id);if(t)t.done=!t.done;save();}
 function deleteTask(id){if(confirm('이 할 일을 삭제할까요?')){tasks=tasks.filter(t=>t.id!==id);save();}}
-function openTaskModal(){
-  $('taskDate').value=today();
+function openTaskModal(date=today()){
+  $('taskDate').value=date;
   $('taskSubject').innerHTML=subjects.map(s=>`<option>${escapeHTML(s)}</option>`).join('');
   $('taskModal').classList.add('show');
   $('taskName').focus();
@@ -732,6 +732,11 @@ function openCalendarDay(date){
 
       <h4 style="margin:22px 0 8px;">할 일</h4>
       ${taskHTMLList||'<p style="color:#999;">등록된 할 일이 없어요.</p>'}
+
+      <button onclick="closeCalendarDay();openTaskModal('${date}')"
+  style="width:100%;padding:10px;margin-top:10px;border:1px solid #ddd;border-radius:9px;background:#f7f9f7;cursor:pointer;">
+  + 할 일 추가
+</button>
 
       <h4 style="margin:22px 0 8px;">루틴</h4>
       ${routineHTMLList||'<p style="color:#999;">예정된 루틴이 없어요.</p>'}
