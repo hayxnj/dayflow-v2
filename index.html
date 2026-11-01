@@ -489,12 +489,12 @@ function clearRoutineException(id){
   save();
 }
 
-function toggleRoutine(id){
+function toggleRoutine(id,date=today()){
   const r = routines.find(x => x.id === id);
   if (!r) return;
   if (!r.checks) r.checks = {};
-  if (!isRoutineScheduledOnDate(r,today())) return;
-  r.checks[today()] = !r.checks[today()];
+  if (!isRoutineScheduledOnDate(r,date)) return;
+  r.checks[date] = !r.checks[date];
   save();
 }
 
@@ -623,34 +623,21 @@ function renderCalendar(){
 
   let html=days.map(d=>`<div class="weekday">${d}</div>`).join('');
 
-  for(let i=0;i<first;i++){
-    html+='<div></div>';
-  }
+  for(let i=0;i<first;i++) html+='<div></div>';
 
   for(let d=1;d<=last;d++){
     const date=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-
     const dayTasks=tasks.filter(t=>t.date===date);
     const dayRoutines=routines.filter(r=>isRoutineScheduledOnDate(r,date));
 
     const entries=[
-      ...dayTasks.map(t=>({
-        name:t.name,
-        type:'할 일',
-        done:t.done
-      })),
-      ...dayRoutines.map(r=>({
-        name:r.name,
-        type:'루틴',
-        done:(r.checks||{})[date]
-      }))
+      ...dayTasks.map(t=>({name:t.name,type:'할 일',done:t.done})),
+      ...dayRoutines.map(r=>({name:r.name,type:'루틴',done:(r.checks||{})[date]}))
     ];
 
-    const visibleEntries=entries.slice(0,3);
-
-    const entryHTML=visibleEntries.map(item=>`
+    const entryHTML=entries.slice(0,3).map(item=>`
       <div style="
-        font-size:11px;
+        font-size:13px;
         line-height:1.4;
         margin-top:4px;
         padding:3px 4px;
@@ -660,7 +647,7 @@ function renderCalendar(){
         ${item.done?'text-decoration:line-through;':''}
         overflow-wrap:anywhere;
       ">
-        ${item.done?'✓ ':''}${item.type==='할 일'?'할 일':'루틴'} · ${escapeHTML(item.name)}
+        ${item.done?'✓ ':''}${item.type} · ${escapeHTML(item.name)}
       </div>
     `).join('');
 
@@ -669,7 +656,9 @@ function renderCalendar(){
       : '';
 
     html+=`
-      <div class="day-cell ${date===today()?'today':''}" style="min-height:110px;">
+      <div class="day-cell ${date===today()?'today':''}"
+        style="min-height:110px;cursor:pointer;"
+        onclick="openCalendarDay('${date}')">
         <strong>${d}</strong>
         ${entryHTML}
         ${moreHTML}
@@ -678,6 +667,93 @@ function renderCalendar(){
   }
 
   $('calendar').innerHTML=html;
+}
+
+function openCalendarDay(date){
+  let modal=document.getElementById('calendarDayModal');
+
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='calendarDayModal';
+    modal.style.cssText=`
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.4);
+      z-index:9999;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const dayTasks=tasks.filter(t=>t.date===date);
+  const dayRoutines=routines.filter(r=>isRoutineScheduledOnDate(r,date));
+
+  const taskHTMLList=dayTasks.map(t=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee;">
+      <input type="checkbox" ${t.done?'checked':''}
+        onchange="toggleTask('${t.id}');openCalendarDay('${date}')">
+      <span style="${t.done?'text-decoration:line-through;color:#999;':''}">
+        ${escapeHTML(t.name)}
+      </span>
+      <small style="margin-left:auto;color:#888;">할 일</small>
+    </div>
+  `).join('');
+
+  const routineHTMLList=dayRoutines.map(r=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee;">
+      <input type="checkbox" ${(r.checks||{})[date]?'checked':''}
+        onchange="toggleRoutine('${r.id}','${date}');openCalendarDay('${date}')">
+      <span style="${(r.checks||{})[date]?'text-decoration:line-through;color:#999;':''}">
+        ${escapeHTML(r.name)}
+      </span>
+      <small style="margin-left:auto;color:#888;">루틴</small>
+    </div>
+  `).join('');
+
+  modal.innerHTML=`
+    <div style="
+      background:white;
+      color:#222;
+      width:100%;
+      max-width:420px;
+      max-height:80vh;
+      overflow-y:auto;
+      border-radius:16px;
+      padding:22px;
+      box-sizing:border-box;
+    ">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">${date}</h3>
+        <button onclick="closeCalendarDay()" style="border:0;background:none;font-size:24px;cursor:pointer;">×</button>
+      </div>
+
+      <h4 style="margin:22px 0 8px;">할 일</h4>
+      ${taskHTMLList||'<p style="color:#999;">등록된 할 일이 없어요.</p>'}
+
+      <h4 style="margin:22px 0 8px;">루틴</h4>
+      ${routineHTMLList||'<p style="color:#999;">예정된 루틴이 없어요.</p>'}
+
+      <button onclick="closeCalendarDay()" style="
+        width:100%;
+        margin-top:22px;
+        padding:12px;
+        border:0;
+        border-radius:10px;
+        background:#e7f5eb;
+        cursor:pointer;
+      ">닫기</button>
+    </div>
+  `;
+
+  modal.style.display='flex';
+}
+
+function closeCalendarDay(){
+  const modal=document.getElementById('calendarDayModal');
+  if(modal) modal.style.display='none';
 }
   
 function changeMonth(n){monthCursor.setMonth(monthCursor.getMonth()+n);renderCalendar();}
