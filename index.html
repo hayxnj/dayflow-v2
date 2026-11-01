@@ -354,7 +354,7 @@ function weekdayNames(){
   return ['일','월','화','수','목','금','토'];
 }
 
-function askSchedule(existing=null){
+function askSchedule(existing=null, selectedDate=today()){
   const nameInput=prompt('루틴 이름을 입력해 주세요.',existing?.name||'');
   if(nameInput===null || !nameInput.trim()) return null;
 
@@ -390,7 +390,7 @@ function askSchedule(existing=null){
     }
     schedule.weekdays=parsed;
     if(schedule.type==='biweekly'){
-      const anchor=prompt('2주 반복의 기준이 되는 날짜를 입력해 주세요. (YYYY-MM-DD)',existing?.schedule?.anchor||today());
+      const anchor=prompt('2주 반복의 기준이 되는 날짜를 입력해 주세요. (YYYY-MM-DD)',existing?.schedule?.anchor||selectedDate);
       if(anchor===null)return null;
       if(!/^\d{4}-\d{2}-\d{2}$/.test(anchor) || Number.isNaN(parseLocalDate(anchor).getTime())){
         alert('날짜를 YYYY-MM-DD 형식으로 입력해 주세요.');
@@ -424,17 +424,26 @@ function askSchedule(existing=null){
   return {name:nameInput.trim(),schedule};
 }
 
-function addRoutine(){
-  const result=askSchedule();
+function addRoutine(selectedDate=today()){
+  const result=askSchedule(null,selectedDate);
   if(!result)return;
+
+  const schedule={...result.schedule};
+
+  if(schedule.type==='biweekly' && !schedule.anchor){
+    schedule.anchor=selectedDate;
+  }
+
   routines.push({
     id:crypto.randomUUID(),
     name:result.name,
-    schedule:result.schedule,
+    schedule,
     exceptions:{},
     checks:{}
   });
+
   save();
+  renderCalendar();
 }
 
 function editRoutine(id){
@@ -740,6 +749,11 @@ function openCalendarDay(date){
 
       <h4 style="margin:22px 0 8px;">루틴</h4>
       ${routineHTMLList||'<p style="color:#999;">예정된 루틴이 없어요.</p>'}
+
+      <button onclick="closeCalendarDay();addRoutine('${date}')"
+  style="width:100%;padding:10px;margin-top:10px;border:1px solid #ddd;border-radius:9px;background:#f7f9f7;cursor:pointer;">
+  + 루틴 추가
+</button>
 
       <button onclick="closeCalendarDay()" style="
         width:100%;
