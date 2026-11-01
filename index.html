@@ -1,0 +1,446 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dayflow 2.0</title>
+<style>
+:root {
+  --bg:#f6f7f5;
+  --panel:#ffffff;
+  --ink:#252a27;
+  --muted:#89918b;
+  --line:#e9ece8;
+  --accent:#71977d;
+  --soft:#edf3ee;
+  --danger:#c66b6b;
+  --shadow:0 5px 24px rgba(30,45,35,.045);
+}
+body.dark {
+  --bg:#171b19;
+  --panel:#222825;
+  --ink:#edf1ed;
+  --muted:#9ba69e;
+  --line:#343d37;
+  --accent:#9bc5a7;
+  --soft:#2c3930;
+  --danger:#e28b8b;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+body {
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{display:flex;min-height:100vh}
+.sidebar {
+  width:230px;padding:28px 18px;background:var(--panel);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;
+  flex-shrink:0;
+}
+.logo{font-size:25px;font-weight:800;letter-spacing:-1.5px;padding:4px 12px 36px}
+.logo span{color:var(--accent)}
+.nav-label{font-size:10px;letter-spacing:1.5px;color:var(--muted);padding:0 12px;margin:12px 0}
+.nav button {
+  width:100%;border:0;background:transparent;color:var(--muted);
+  text-align:left;padding:12px;border-radius:10px;margin:2px 0;
+  font-size:14px;display:flex;gap:12px;align-items:center;
+}
+.nav button:hover,.nav button.active{background:var(--soft);color:var(--accent)}
+.sidebar-bottom{margin-top:auto;padding:12px;color:var(--muted);font-size:11px}
+.main{flex:1;min-width:0;padding:36px clamp(20px,5vw,65px);max-width:1500px;margin:0 auto;width:100%}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:38px}
+.date-label{font-size:12px;color:var(--muted);letter-spacing:1px}
+.top-actions{display:flex;gap:8px}
+.icon-btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:9px 12px}
+h1{font-size:30px;letter-spacing:-1.2px;margin:9px 0 5px}
+.subtitle{color:var(--muted);font-size:13px}
+.page{display:none}.page.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.stat-num{font-size:28px;font-weight:750;letter-spacing:-1px;margin:12px 0 4px}
+.stat-label{font-size:12px;color:var(--muted)}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin:28px 0 14px}
+.section-head h2{font-size:16px;margin:0}
+.primary{background:var(--accent);color:white;border:0;border-radius:10px;padding:10px 15px;font-size:13px}
+.secondary{background:var(--soft);color:var(--accent);border:0;border-radius:9px;padding:9px 12px;font-size:12px}
+.task-list{display:flex;flex-direction:column;gap:8px}
+.task {
+  display:flex;align-items:center;gap:12px;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px;padding:14px;
+}
+.task input[type=checkbox]{accent-color:var(--accent);width:17px;height:17px}
+.task-name{flex:1;font-size:13px;min-width:0;overflow-wrap:anywhere}
+.task.done .task-name{text-decoration:line-through;color:var(--muted)}
+.task-meta{font-size:11px;color:var(--muted);white-space:nowrap}
+.delete{border:0;background:transparent;color:var(--muted);font-size:17px}
+.delete:hover{color:var(--danger)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.field{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 12px;min-width:0}
+.toolbar input{flex:1;min-width:160px}
+.empty{padding:35px;text-align:center;color:var(--muted);font-size:13px;background:var(--panel);border:1px dashed var(--line);border-radius:13px}
+.routine-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.routine{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px}
+.routine-top{display:flex;justify-content:space-between;align-items:center}
+.routine-name{font-size:14px;font-weight:650}
+.routine-check{margin-top:18px;display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px}
+.progress{height:6px;background:var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
+.progress div{height:100%;background:var(--accent);border-radius:10px}
+.subject-chip{display:inline-block;background:var(--soft);color:var(--accent);padding:5px 9px;border-radius:7px;font-size:11px;margin:3px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.day-cell{min-height:90px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px}
+.day-cell.today{border:1.5px solid var(--accent)}
+.day-cell small{display:block;color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+.weekday{text-align:center;color:var(--muted);font-size:11px;padding:8px}
+.progress-track{height:10px;background:var(--line);border-radius:10px;overflow:hidden}
+.progress-track div{height:100%;background:var(--accent)}
+.search-results{display:flex;flex-direction:column;gap:8px}
+.modal-backdrop{display:none;position:fixed;inset:0;background:#0007;z-index:10;align-items:center;justify-content:center;padding:16px}
+.modal-backdrop.show{display:flex}
+.modal{background:var(--panel);width:min(430px,100%);border-radius:17px;padding:22px}
+.modal h2{font-size:18px;margin:0 0 18px}
+.modal input,.modal select{width:100%;margin:6px 0 12px}
+.modal label{font-size:11px;color:var(--muted)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.mobile-nav{display:none}
+@media(max-width:760px){
+ .sidebar{display:none}
+ .main{padding:23px 16px 90px}
+ .stats{gap:8px}
+ .card{padding:14px}
+ .stat-num{font-size:23px}
+ .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);justify-content:space-around;padding:8px 3px calc(8px + env(safe-area-inset-bottom));z-index:5}
+ .mobile-nav button{border:0;background:transparent;color:var(--muted);font-size:10px;padding:7px}
+ .mobile-nav button.active{color:var(--accent)}
+ .day-cell{min-height:66px;padding:5px;font-size:10px}
+ .day-cell small{font-size:9px}
+}
+@media(max-width:420px){.stats{grid-template-columns:repeat(3,1fr)}.stat-label{font-size:10px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="logo">dayflow<span>.</span></div>
+  <div class="nav-label">WORKSPACE</div>
+  <nav class="nav" id="sideNav">
+    <button class="active" data-page="home">⌂　홈</button>
+    <button data-page="tasks">☑　할 일</button>
+    <button data-page="calendar">▦　캘린더</button>
+    <button data-page="routines">↻　루틴</button>
+    <button data-page="subjects">▤　과목</button>
+    <button data-page="stats">◷　통계</button>
+  </nav>
+  <div class="nav-label">PERSONAL</div>
+  <nav class="nav">
+    <button data-page="settings">⚙　설정</button>
+  </nav>
+  <div class="sidebar-bottom">DAYFLOW 2.0 · YOUR SPACE</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="date-label" id="todayDate"></div>
+      <h1 id="pageTitle">홈</h1>
+      <div class="subtitle" id="pageSubtitle">오늘의 계획을 확인해 보세요.</div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" onclick="showSearch()" aria-label="검색">⌕</button>
+      <button class="icon-btn" onclick="toggleTheme()" aria-label="테마">◐</button>
+    </div>
+  </div>
+
+  <section class="page active" id="page-home">
+    <div class="stats">
+      <div class="card"><div class="stat-label">오늘의 할 일</div><div class="stat-num" id="homeTotal">0</div><div class="stat-label">등록된 항목</div></div>
+      <div class="card"><div class="stat-label">완료</div><div class="stat-num" id="homeDone">0</div><div class="stat-label">오늘 끝낸 항목</div></div>
+      <div class="card"><div class="stat-label">루틴 달성</div><div class="stat-num" id="homeRoutine">0%</div><div class="stat-label">오늘의 진행률</div></div>
+    </div>
+    <div class="section-head"><h2>오늘의 할 일</h2><button class="primary" onclick="openTaskModal()">+ 할 일 추가</button></div>
+    <div class="task-list" id="homeTasks"></div>
+    <div class="section-head"><h2>오늘의 루틴</h2><button class="secondary" onclick="navigate('routines')">모두 보기</button></div>
+    <div class="routine-grid" id="homeRoutines"></div>
+  </section>
+
+  <section class="page" id="page-tasks">
+    <div class="toolbar">
+      <input class="field" id="taskSearch" placeholder="할 일 검색..." oninput="renderTasks()">
+      <select class="field" id="taskFilter" onchange="renderTasks()"><option value="all">전체</option><option value="active">미완료</option><option value="done">완료</option></select>
+      <button class="primary" onclick="openTaskModal()">+ 추가</button>
+    </div>
+    <div class="task-list" id="allTasks"></div>
+  </section>
+
+  <section class="page" id="page-calendar">
+    <div class="section-head">
+      <button class="secondary" onclick="changeMonth(-1)">← 이전</button>
+      <h2 id="monthLabel"></h2>
+      <button class="secondary" onclick="changeMonth(1)">다음 →</button>
+    </div>
+    <div class="calendar-grid" id="calendar"></div>
+  </section>
+
+  <section class="page" id="page-routines">
+    <div class="section-head"><h2>나의 루틴</h2><button class="primary" onclick="addRoutine()">+ 루틴 추가</button></div>
+    <div class="routine-grid" id="allRoutines"></div>
+  </section>
+
+  <section class="page" id="page-subjects">
+    <div class="section-head"><h2>과목 목록</h2><button class="primary" onclick="addSubject()">+ 과목 추가</button></div>
+    <div class="card" id="subjectList"></div>
+  </section>
+
+  <section class="page" id="page-stats">
+    <div class="stats">
+      <div class="card"><div class="stat-label">전체 할 일</div><div class="stat-num" id="statTotal">0</div></div>
+      <div class="card"><div class="stat-label">완료한 할 일</div><div class="stat-num" id="statDone">0</div></div>
+      <div class="card"><div class="stat-label">완료율</div><div class="stat-num" id="statRate">0%</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>전체 완료 진행률</h2></div>
+      <div class="progress-track"><div id="statBar" style="width:0%"></div></div>
+      <p class="subtitle" id="statText"></p>
+    </div>
+  </section>
+
+  <section class="page" id="page-settings">
+    <div class="card">
+      <h2>화면 설정</h2>
+      <p class="subtitle">Dayflow의 화면을 원하는 방식으로 바꿔 보세요.</p>
+      <button class="secondary" onclick="toggleTheme()">라이트 / 다크 모드 전환</button>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>데이터 백업</h2>
+      <p class="subtitle">현재 브라우저에 저장된 Dayflow 데이터를 파일로 내려받습니다.</p>
+      <button class="primary" onclick="exportData()">백업 파일 다운로드</button>
+      <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
+      <label>백업 파일 불러오기</label>
+      <input class="field" type="file" accept="application/json" onchange="importData(event)">
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>저장 안내</h2>
+      <p class="subtitle">현재 버전은 이 브라우저에 데이터를 저장합니다. 계정 로그인과 기기 간 동기화는 다음 단계에서 연결할 예정입니다.</p>
+    </div>
+  </section>
+
+  <section class="page" id="page-search">
+    <div class="toolbar"><input class="field" id="globalSearch" placeholder="일정과 할 일 검색..." oninput="renderSearch()"></div>
+    <div class="search-results" id="searchResults"></div>
+  </section>
+</main>
+</div>
+
+<nav class="mobile-nav" id="mobileNav">
+  <button class="active" data-page="home">⌂<br>홈</button>
+  <button data-page="tasks">☑<br>할 일</button>
+  <button data-page="calendar">▦<br>캘린더</button>
+  <button data-page="routines">↻<br>루틴</button>
+  <button data-page="settings">⚙<br>설정</button>
+</nav>
+
+<div class="modal-backdrop" id="taskModal">
+  <div class="modal">
+    <h2>할 일 추가</h2>
+    <form id="taskForm">
+      <label>할 일 이름</label>
+      <input class="field" id="taskName" required maxlength="100" placeholder="무엇을 할까요?">
+      <label>날짜</label>
+      <input class="field" id="taskDate" type="date" required>
+      <label>과목</label>
+      <select class="field" id="taskSubject"></select>
+      <label>우선순위</label>
+      <select class="field" id="taskPriority"><option value="보통">보통</option><option value="높음">높음</option><option value="낮음">낮음</option></select>
+      <div class="modal-actions">
+        <button type="button" class="secondary" onclick="closeTaskModal()">취소</button>
+        <button class="primary" type="submit">추가하기</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const today = () => new Date().toLocaleDateString('en-CA');
+const read = (key, fallback) => {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+  catch { return fallback; }
+};
+let tasks = read('df2_tasks', []);
+let routines = read('df2_routines', []);
+let subjects = read('df2_subjects', ['기타']);
+let monthCursor = new Date();
+
+const titles = {
+  home:['홈','오늘의 계획을 확인해 보세요.'],
+  tasks:['할 일','해야 할 일을 정리해 보세요.'],
+  calendar:['캘린더','날짜별 계획을 확인해 보세요.'],
+  routines:['루틴','매일의 작은 습관을 기록해 보세요.'],
+  subjects:['과목','과목별 계획을 관리해 보세요.'],
+  stats:['통계','나의 진행 상황을 확인해 보세요.'],
+  settings:['설정','Dayflow를 나에게 맞게 설정해 보세요.'],
+  search:['검색','일정과 할 일을 찾아보세요.']
+};
+
+function save(){
+  localStorage.setItem('df2_tasks',JSON.stringify(tasks));
+  localStorage.setItem('df2_routines',JSON.stringify(routines));
+  localStorage.setItem('df2_subjects',JSON.stringify(subjects));
+  render();
+}
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('page-'+page).classList.add('active');
+  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  $('pageTitle').textContent=titles[page][0];
+  $('pageSubtitle').textContent=titles[page][1];
+  if(page==='search') $('globalSearch').focus();
+  render();
+}
+document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
+
+function taskHTML(t){
+  return `<div class="task ${t.done?'done':''}">
+    <input type="checkbox" ${t.done?'checked':''} aria-label="완료" onchange="toggleTask('${t.id}')">
+    <div class="task-name">${escapeHTML(t.name)}</div>
+    <span class="task-meta">${escapeHTML(t.subject||'기타')} · ${escapeHTML(t.priority||'보통')}</span>
+    <span class="task-meta">${escapeHTML(t.date||'')}</span>
+    <button class="delete" onclick="deleteTask('${t.id}')" aria-label="삭제">×</button>
+  </div>`;
+}
+function renderTasks(){
+  const q=($('taskSearch')?.value||'').toLowerCase();
+  const filter=$('taskFilter')?.value||'all';
+  let list=tasks.filter(t=>(t.name+' '+t.subject).toLowerCase().includes(q));
+  if(filter==='active')list=list.filter(t=>!t.done);
+  if(filter==='done')list=list.filter(t=>t.done);
+  $('allTasks').innerHTML=list.length?list.sort((a,b)=>a.date.localeCompare(b.date)).map(taskHTML).join(''):'<div class="empty">표시할 할 일이 없어요.</div>';
+}
+function toggleTask(id){const t=tasks.find(x=>x.id===id);if(t)t.done=!t.done;save();}
+function deleteTask(id){if(confirm('이 할 일을 삭제할까요?')){tasks=tasks.filter(t=>t.id!==id);save();}}
+function openTaskModal(){
+  $('taskDate').value=today();
+  $('taskSubject').innerHTML=subjects.map(s=>`<option>${escapeHTML(s)}</option>`).join('');
+  $('taskModal').classList.add('show');
+  $('taskName').focus();
+}
+function closeTaskModal(){$('taskModal').classList.remove('show');}
+$('taskForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  tasks.push({id:crypto.randomUUID(),name:$('taskName').value.trim(),date:$('taskDate').value,subject:$('taskSubject').value,priority:$('taskPriority').value,done:false});
+  $('taskForm').reset();closeTaskModal();save();
+});
+function addRoutine(){
+  const name=prompt('새 루틴 이름을 입력해 주세요.');
+  if(!name?.trim())return;
+  routines.push({id:crypto.randomUUID(),name:name.trim(),checks:{}});
+  save();
+}
+function toggleRoutine(id){
+  const r=routines.find(x=>x.id===id);if(!r)return;
+  r.checks[today()]=!r.checks[today()];save();
+}
+function deleteRoutine(id){
+  if(confirm('이 루틴을 삭제할까요?')){routines=routines.filter(r=>r.id!==id);save();}
+}
+function routineHTML(r){
+  const done=!!r.checks[today()];
+  return `<div class="routine">
+    <div class="routine-top"><div class="routine-name">${escapeHTML(r.name)}</div><button class="delete" onclick="deleteRoutine('${r.id}')">×</button></div>
+    <label class="routine-check"><input type="checkbox" ${done?'checked':''} onchange="toggleRoutine('${r.id}')"> 오늘 완료</label>
+    <div class="progress"><div style="width:${done?100:0}%"></div></div>
+  </div>`;
+}
+function addSubject(){
+  const name=prompt('과목 이름을 입력해 주세요.');
+  if(!name?.trim())return;
+  if(subjects.includes(name.trim())){alert('이미 있는 과목이에요.');return;}
+  subjects.push(name.trim());save();
+}
+function removeSubject(s){
+  if(s==='기타'){alert('기타 과목은 기본 과목이라 삭제할 수 없어요.');return;}
+  if(confirm(`'${s}' 과목을 삭제할까요? 기존 할 일의 과목은 유지됩니다.`)){
+    subjects=subjects.filter(x=>x!==s);save();
+  }
+}
+function renderSubjects(){
+  $('subjectList').innerHTML=subjects.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><span class="subject-chip">${escapeHTML(s)}</span><button class="delete" onclick="removeSubject('${s.replace(/'/g,"\\'")}')">×</button></div>`).join('');
+}
+function renderCalendar(){
+  const y=monthCursor.getFullYear(),m=monthCursor.getMonth();
+  $('monthLabel').textContent=`${y}년 ${m+1}월`;
+  const first=new Date(y,m,1).getDay(),last=new Date(y,m+1,0).getDate();
+  const days=['일','월','화','수','목','금','토'];
+  let html=days.map(d=>`<div class="weekday">${d}</div>`).join('');
+  for(let i=0;i<first;i++)html+='<div></div>';
+  for(let d=1;d<=last;d++){
+    const date=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const count=tasks.filter(t=>t.date===date).length;
+    html+=`<div class="day-cell ${date===today()?'today':''}"><strong>${d}</strong>${count?`<small>${count}개 일정</small>`:''}</div>`;
+  }
+  $('calendar').innerHTML=html;
+}
+function changeMonth(n){monthCursor.setMonth(monthCursor.getMonth()+n);renderCalendar();}
+function renderHome(){
+  const list=tasks.filter(t=>t.date===today());
+  $('homeTotal').textContent=list.length;
+  $('homeDone').textContent=list.filter(t=>t.done).length;
+  const checked=routines.filter(r=>r.checks[today()]).length;
+  $('homeRoutine').textContent=routines.length?Math.round(checked/routines.length*100)+'%':'0%';
+  $('homeTasks').innerHTML=list.length?list.map(taskHTML).join(''):'<div class="empty">오늘 등록된 할 일이 없어요.</div>';
+  $('homeRoutines').innerHTML=routines.length?routines.slice(0,4).map(routineHTML).join(''):'<div class="empty">아직 루틴이 없어요.</div>';
+}
+function renderStats(){
+  const done=tasks.filter(t=>t.done).length;
+  const rate=tasks.length?Math.round(done/tasks.length*100):0;
+  $('statTotal').textContent=tasks.length;
+  $('statDone').textContent=done;
+  $('statRate').textContent=rate+'%';
+  $('statBar').style.width=rate+'%';
+  $('statText').textContent=`전체 ${tasks.length}개 중 ${done}개를 완료했어요.`;
+}
+function showSearch(){navigate('search');}
+function renderSearch(){
+  const q=$('globalSearch').value.toLowerCase();
+  const found=tasks.filter(t=>(t.name+' '+t.subject).toLowerCase().includes(q));
+  $('searchResults').innerHTML=found.length?found.map(taskHTML).join(''):'<div class="empty">검색 결과가 없어요.</div>';
+}
+function toggleTheme(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem('df2_theme',document.body.classList.contains('dark')?'dark':'light');
+}
+function exportData(){
+  const data={tasks,routines,subjects,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dayflow-backup.json';a.click();URL.revokeObjectURL(a.href);
+}
+function importData(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const d=JSON.parse(reader.result);
+      if(!Array.isArray(d.tasks)||!Array.isArray(d.routines)||!Array.isArray(d.subjects))throw new Error();
+      if(!confirm('현재 데이터를 백업 파일의 내용으로 바꿀까요?'))return;
+      tasks=d.tasks;routines=d.routines;subjects=d.subjects;save();alert('백업을 불러왔어요.');
+    }catch{alert('올바른 Dayflow 백업 파일이 아니에요.');}
+  };
+  reader.readAsText(file);
+}
+function render(){
+  $('todayDate').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'}).toUpperCase();
+  renderHome();renderTasks();renderCalendar();renderSubjects();renderStats();
+  $('allRoutines').innerHTML=routines.length?routines.map(routineHTML).join(''):'<div class="empty">아직 루틴이 없어요.</div>';
+  if($('globalSearch').value)renderSearch();
+}
+if(localStorage.getItem('df2_theme')==='dark')document.body.classList.add('dark');
+render();
+</script>
+</body>
+</html>
