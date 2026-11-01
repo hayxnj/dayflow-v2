@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -86,6 +85,8 @@ h1{font-size:30px;letter-spacing:-1.2px;margin:9px 0 5px}
 .routine{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px}
 .routine-top{display:flex;justify-content:space-between;align-items:center}
 .routine-name{font-size:14px;font-weight:650}
+.routine-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}
+.routine-actions button{font-size:11px;padding:7px 9px}
 .routine-check{margin-top:18px;display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px}
 .progress{height:6px;background:var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
 .progress div{height:100%;background:var(--accent);border-radius:10px}
@@ -336,27 +337,267 @@ $('taskForm').addEventListener('submit',e=>{
   tasks.push({id:crypto.randomUUID(),name:$('taskName').value.trim(),date:$('taskDate').value,subject:$('taskSubject').value,priority:$('taskPriority').value,done:false});
   $('taskForm').reset();closeTaskModal();save();
 });
+
+function dateString(date){
+  const y=date.getFullYear();
+  const m=String(date.getMonth()+1).padStart(2,'0');
+  const d=String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseLocalDate(value){
+  const parts=value.split('-').map(Number);
+  return new Date(parts[0],parts[1]-1,parts[2]);
+}
+
+function weekdayNames(){
+  return ['일','월','화','수','목','금','토'];
+}
+
+function askSchedule(existing=null){
+  const nameInput=prompt('루틴 이름을 입력해 주세요.',existing?.name||'');
+  if(nameInput===null || !nameInput.trim()) return null;
+
+  const typeOptions={
+    '1':'daily',
+    '2':'weekly',
+    '3':'biweekly',
+    '4':'monthly'
+  };
+  const currentType=existing?.schedule?.type || 'daily';
+  const typeDefault=Object.keys(typeOptions).find(k=>typeOptions[k]===currentType)||'1';
+  const type=prompt(
+    '반복 방식을 선택해 주세요.\n1 = 매일\n2 = 매주 (요일 지정)\n3 = 2주마다 (요일 지정)\n4 = 매달 (몇째 주 + 요일)',
+    typeDefault
+  );
+  if(type===null || !typeOptions[type]){
+    if(type!==null) alert('1~4 중에서 선택해 주세요.');
+    return null;
+  }
+
+  const schedule={type:typeOptions[type]};
+  if(schedule.type==='weekly' || schedule.type==='biweekly'){
+    const current=(existing?.schedule?.weekdays||[1]).join(',');
+    const days=prompt(
+      '반복할 요일을 숫자로 입력해 주세요. 여러 요일은 쉼표로 구분해요.\n일=0, 월=1, 화=2, 수=3, 목=4, 금=5, 토=6',
+      current
+    );
+    if(days===null)return null;
+    const parsed=[...new Set(days.split(',').map(x=>Number(x.trim())))];
+    if(!parsed.length || parsed.some(x=>!Number.isInteger(x)||x<0||x>6)){
+      alert('요일은 0~6 숫자로 입력해 주세요. 예: 1,3,5');
+      return null;
+    }
+    schedule.weekdays=parsed;
+    if(schedule.type==='biweekly'){
+      const anchor=prompt('2주 반복의 기준이 되는 날짜를 입력해 주세요. (YYYY-MM-DD)',existing?.schedule?.anchor||today());
+      if(anchor===null)return null;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(anchor) || Number.isNaN(parseLocalDate(anchor).getTime())){
+        alert('날짜를 YYYY-MM-DD 형식으로 입력해 주세요.');
+        return null;
+      }
+      schedule.anchor=anchor;
+    }
+  }
+
+  if(schedule.type==='monthly'){
+    const occurrence=prompt(
+      '몇째 주에 반복할까요?\n1 = 첫째 주\n2 = 둘째 주\n3 = 셋째 주\n4 = 넷째 주\n5 = 마지막 주',
+      String(existing?.schedule?.weekOfMonth||2)
+    );
+    if(occurrence===null || !['1','2','3','4','5'].includes(occurrence)){
+      if(occurrence!==null)alert('1~5 중에서 선택해 주세요.');
+      return null;
+    }
+    const day=prompt(
+      '반복할 요일을 숫자로 입력해 주세요.\n일=0, 월=1, 화=2, 수=3, 목=4, 금=5, 토=6',
+      String(existing?.schedule?.weekday ?? 1)
+    );
+    if(day===null || !/^[0-6]$/.test(day)){
+      if(day!==null)alert('요일은 0~6 숫자로 입력해 주세요.');
+      return null;
+    }
+    schedule.weekOfMonth=Number(occurrence);
+    schedule.weekday=Number(day);
+  }
+
+  return {name:nameInput.trim(),schedule};
+}
+
 function addRoutine(){
-  const name=prompt('새 루틴 이름을 입력해 주세요.');
-  if(!name?.trim())return;
-  routines.push({id:crypto.randomUUID(),name:name.trim(),checks:{}});
+  const result=askSchedule();
+  if(!result)return;
+  routines.push({
+    id:crypto.randomUUID(),
+    name:result.name,
+    schedule:result.schedule,
+    exceptions:{},
+    checks:{}
+  });
   save();
 }
-function toggleRoutine(id){
-  const r=routines.find(x=>x.id===id);if(!r)return;
-  r.checks[today()]=!r.checks[today()];save();
+
+function editRoutine(id){
+  const r=routines.find(x=>x.id===id);
+  if(!r)return;
+  const result=askSchedule(r);
+  if(!result)return;
+  r.name=result.name;
+  r.schedule=result.schedule;
+  save();
 }
+
+function setRoutineException(id){
+  const r=routines.find(x=>x.id===id);
+  if(!r)return;
+  const date=prompt('예외를 적용할 날짜를 입력해 주세요. (YYYY-MM-DD)',today());
+  if(date===null)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(parseLocalDate(date).getTime())){
+    alert('날짜를 YYYY-MM-DD 형식으로 입력해 주세요.');
+    return;
+  }
+  const choice=prompt(
+    `${date} 날짜의 예외를 선택해 주세요.\n1 = 이번 날짜만 쉬기\n2 = 원래 일정이 없어도 이번 날짜만 실행`,
+    '1'
+  );
+  if(choice===null)return;
+  if(choice!=='1' && choice!=='2'){
+    alert('1 또는 2를 입력해 주세요.');
+    return;
+  }
+  if(!r.exceptions)r.exceptions={};
+  r.exceptions[date]=choice==='1'?'skip':'force';
+  save();
+}
+
+function clearRoutineException(id){
+  const r=routines.find(x=>x.id===id);
+  if(!r)return;
+  const dates=Object.keys(r.exceptions||{}).sort();
+  if(!dates.length){
+    alert('등록된 날짜별 예외가 없어요.');
+    return;
+  }
+  const date=prompt('예외를 삭제할 날짜를 입력해 주세요.\n등록된 날짜: '+dates.join(', '),dates[0]);
+
+  if(date===null)return;
+  if(!r.exceptions[date]){
+    alert('해당 날짜에 등록된 예외가 없어요.');
+    return;
+  }
+  delete r.exceptions[date];
+  save();
+}
+
+function toggleRoutine(id){
+  const r = routines.find(x => x.id === id);
+  if (!r) return;
+  if (!r.checks) r.checks = {};
+  if (!isRoutineScheduledOnDate(r,today())) return;
+  r.checks[today()] = !r.checks[today()];
+  save();
+}
+
 function deleteRoutine(id){
   if(confirm('이 루틴을 삭제할까요?')){routines=routines.filter(r=>r.id!==id);save();}
 }
+
+function isRoutineScheduledOnDate(r,dateText){
+  const exceptions=r.exceptions||{};
+  if(exceptions[dateText]==='skip')return false;
+  if(exceptions[dateText]==='force')return true;
+
+  const schedule=r.schedule || null;
+
+  // 기존 버전의 루틴 데이터는 기존 반복 주기를 유지합니다.
+  if(!schedule){
+    if(r.repeat==='weekdays'){
+      const day=parseLocalDate(dateText).getDay();
+      return day>=1 && day<=5;
+    }
+    if(r.repeat==='weekends'){
+      const day=parseLocalDate(dateText).getDay();
+      return day===0 || day===6;
+    }
+    return true;
+  }
+
+  const date=parseLocalDate(dateText);
+  const day=date.getDay();
+
+  if(schedule.type==='daily')return true;
+  if(schedule.type==='weekly')return (schedule.weekdays||[]).includes(day);
+
+  if(schedule.type==='biweekly'){
+    if(!(schedule.weekdays||[]).includes(day))return false;
+    const anchor=parseLocalDate(schedule.anchor||dateText);
+    const mondayOf=d=>{
+      const copy=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+      copy.setDate(copy.getDate()-(copy.getDay()+6)%7);
+      copy.setHours(0,0,0,0);
+      return copy;
+    };
+    const weeks=Math.round((mondayOf(date)-mondayOf(anchor))/604800000);
+    return weeks>=0 && weeks%2===0;
+  }
+
+  if(schedule.type==='monthly'){
+    if(day!==schedule.weekday)return false;
+    const occurrence=Math.ceil(date.getDate()/7);
+    const isLast=new Date(date.getFullYear(),date.getMonth(),date.getDate()+7).getMonth()!==date.getMonth();
+    return schedule.weekOfMonth===5 ? isLast : occurrence===schedule.weekOfMonth;
+  }
+  return true;
+}
+
+function isRoutineScheduledToday(r){
+  return isRoutineScheduledOnDate(r,today());
+}
+
+function routineRepeatLabel(r){
+  const s=r.schedule;
+  if(!s){
+    if(r.repeat==='weekdays')return '평일';
+    if(r.repeat==='weekends')return '주말';
+    return '매일';
+  }
+  if(s.type==='daily')return '매일';
+  const names=weekdayNames();
+  if(s.type==='weekly')return '매주 '+(s.weekdays||[]).sort().map(d=>names[d]).join('·');
+  if(s.type==='biweekly')return '2주마다 '+(s.weekdays||[]).sort().map(d=>names[d]).join('·');
+  if(s.type==='monthly'){
+    const week=s.weekOfMonth===5?'마지막':({1:'첫째',2:'둘째',3:'셋째',4:'넷째'}[s.weekOfMonth]||'');
+    return `매달 ${week}주 ${names[s.weekday]}`;
+  }
+  return '매일';
+}
+
 function routineHTML(r){
-  const done=!!r.checks[today()];
+  const scheduled=isRoutineScheduledToday(r);
+  const done=!!(r.checks||{})[today()];
+  const exception=(r.exceptions||{})[today()];
   return `<div class="routine">
-    <div class="routine-top"><div class="routine-name">${escapeHTML(r.name)}</div><button class="delete" onclick="deleteRoutine('${r.id}')">×</button></div>
-    <label class="routine-check"><input type="checkbox" ${done?'checked':''} onchange="toggleRoutine('${r.id}')"> 오늘 완료</label>
+    <div class="routine-top">
+      <div>
+        <div class="routine-name">${escapeHTML(r.name)}</div>
+        <span class="subject-chip">${escapeHTML(routineRepeatLabel(r))}</span>
+        ${exception?`<span class="subject-chip">${exception==='skip'?'오늘 예외: 쉬는 날':'오늘만 추가'}</span>`:''}
+      </div>
+      <button class="delete" onclick="deleteRoutine('${r.id}')">×</button>
+    </div>
+    <label class="routine-check">
+      <input type="checkbox" ${done?'checked':''} ${scheduled?'':'disabled'} onchange="toggleRoutine('${r.id}')">
+      ${scheduled?'오늘 완료':'오늘은 예정된 날이 아니에요'}
+    </label>
     <div class="progress"><div style="width:${done?100:0}%"></div></div>
+    <div class="routine-actions">
+      <button class="secondary" onclick="editRoutine('${r.id}')">반복 수정</button>
+      <button class="secondary" onclick="setRoutineException('${r.id}')">날짜 예외 설정</button>
+      <button class="secondary" onclick="clearRoutineException('${r.id}')">예외 삭제</button>
+    </div>
   </div>`;
 }
+
 function addSubject(){
   const name=prompt('과목 이름을 입력해 주세요.');
   if(!name?.trim())return;
@@ -387,15 +628,28 @@ function renderCalendar(){
   $('calendar').innerHTML=html;
 }
 function changeMonth(n){monthCursor.setMonth(monthCursor.getMonth()+n);renderCalendar();}
+
 function renderHome(){
-  const list=tasks.filter(t=>t.date===today());
-  $('homeTotal').textContent=list.length;
-  $('homeDone').textContent=list.filter(t=>t.done).length;
-  const checked=routines.filter(r=>r.checks[today()]).length;
-  $('homeRoutine').textContent=routines.length?Math.round(checked/routines.length*100)+'%':'0%';
-  $('homeTasks').innerHTML=list.length?list.map(taskHTML).join(''):'<div class="empty">오늘 등록된 할 일이 없어요.</div>';
-  $('homeRoutines').innerHTML=routines.length?routines.slice(0,4).map(routineHTML).join(''):'<div class="empty">아직 루틴이 없어요.</div>';
+  const list = tasks.filter(t => t.date === today());
+  $('homeTotal').textContent = list.length;
+  $('homeDone').textContent = list.filter(t => t.done).length;
+
+  const todayRoutines = routines.filter(isRoutineScheduledToday);
+  const checked = todayRoutines.filter(r => (r.checks||{})[today()]).length;
+
+  $('homeRoutine').textContent = todayRoutines.length
+    ? Math.round(checked / todayRoutines.length * 100) + '%'
+    : '0%';
+
+  $('homeTasks').innerHTML = list.length
+    ? list.map(taskHTML).join('')
+    : '<div class="empty">오늘 등록된 할 일이 없어요.</div>';
+
+  $('homeRoutines').innerHTML = todayRoutines.length
+    ? todayRoutines.slice(0, 4).map(routineHTML).join('')
+    : '<div class="empty">오늘 예정된 루틴이 없어요.</div>';
 }
+
 function renderStats(){
   const done=tasks.filter(t=>t.done).length;
   const rate=tasks.length?Math.round(done/tasks.length*100):0;
