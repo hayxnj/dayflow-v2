@@ -57,7 +57,11 @@
 const $=id=>document.getElementById(id);const TODAY=()=>dateString(new Date());const DAYS=['일','월','화','수','목','금','토'];
 const PALETTE=['#ef5350','#e53935','#d81b60','#c2185b','#8e24aa','#7b1fa2','#5e35b1','#3949ab','#1e88e5','#039be5','#00acc1','#00897b','#43a047','#7cb342','#c0ca33','#fdd835','#ffb300','#fb8c00','#f4511e','#6d4c41','#8d6e63','#78909c','#546e7a','#455a64','#ad718d','#cf8e70','#a5a5dc','#74aaa2','#a4bd75','#d4ad55','#f08aa6','#6b9ed6','#8c7bd1','#5baf79','#c06fbb','#999999'];
 let dfClient=null,session=null,user=null,db={tasks:[],routines:[],subjects:[]},currentPage='home',calendarView='month',calendarDate=new Date(),statsPeriod='day',editingTaskId=null,editingRoutineId=null,editingSubjectId=null,taskColor='#638b70',routineColor='#638b70',subjectColor='#638b70',tempExceptions={},selectedExceptionDate=null,saveTimer=null,authMode='login';
-const ADMIN_EMAIL='hayxnj@naver.com';const cfg=()=>JSON.parse(localStorage.getItem('dayflow_supabase_config')||'{}');const uid=()=>crypto.randomUUID();
+const ADMIN_EMAIL='hayxnj@naver.com';
+// Public Supabase project settings: replace the placeholder with the project's sb_publishable_ key.
+const DEFAULT_SUPABASE_URL='https://aldpgndpkamjytmsmqjk.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY='sb_publishable_csES9b_UAq9OOxoLPmUmEA_WJSp0IGy';
+const cfg=()=>{const saved=JSON.parse(localStorage.getItem('dayflow_supabase_config')||'{}');return {url:saved.url||DEFAULT_SUPABASE_URL,key:saved.key||DEFAULT_SUPABASE_PUBLISHABLE_KEY}};const uid=()=>crypto.randomUUID();
 function dateString(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function parseDate(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function setError(s){$('authError').textContent=s||''}function notify(s){alert(s)}function initAuth(){const c=cfg();if(!c.url||!c.key){$('setupPanel').classList.remove('hidden');$('authFormWrap').classList.add('hidden');return}connectSupabase();}
