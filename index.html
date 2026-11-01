@@ -669,7 +669,7 @@ function renderCalendar(){
       : '';
 
     html+=`
-      <div class="day-cell ${date===today()?'today':''}">
+      <div class="day-cell ${date===today()?'today':''}" style="min-height:110px;">
         <strong>${d}</strong>
         ${entryHTML}
         ${moreHTML}
