@@ -1,0 +1,31 @@
+name: Generate Dayflow PWA icons
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  icons:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pwa-icon-test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Render PNG icons from the Dayflow wordmark
+        run: |
+          python -m pip install --quiet cairosvg
+          python - <<'PY'
+          import cairosvg
+          for size in (180, 192, 512):
+              cairosvg.svg2png(url='www/icon.svg', write_to=f'www/icon-{size}.png',
+                                output_width=size, output_height=size)
+          PY
+      - name: Commit generated icons to test branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add www/icon-180.png www/icon-192.png www/icon-512.png
+          git commit -m "Add PNG icons for Dayflow PWA"
+          git push origin HEAD:pwa-icon-test
