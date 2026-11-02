@@ -1,5 +1,8 @@
 name: Generate Dayflow PWA icons
 on:
+  push:
+    branches:
+      - pwa-icon-test
   workflow_dispatch:
 permissions:
   contents: write
